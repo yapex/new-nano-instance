@@ -6,120 +6,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-# 可用的 Channel 类型
-CHANNELS = {
-    "telegram": {
-        "name": "Telegram",
-        "fields": ["token", "allow_from"],
-        "required": ["token"],
-    },
-    "discord": {
-        "name": "Discord",
-        "fields": ["token", "allow_from", "intents"],
-        "required": ["token"],
-    },
-    "whatsapp": {
-        "name": "WhatsApp",
-        "fields": ["bridge_url", "bridge_token", "allow_from"],
-        "required": ["bridge_url"],
-    },
-    "feishu": {
-        "name": "Feishu (飞书)",
-        "fields": ["app_id", "app_secret", "encrypt_key", "verification_token", "allow_from"],
-        "required": ["app_id", "app_secret"],
-    },
-    "dingtalk": {
-        "name": "DingTalk (钉钉)",
-        "fields": ["client_id", "client_secret", "allow_from"],
-        "required": ["client_id", "client_secret"],
-    },
-    "slack": {
-        "name": "Slack",
-        "fields": ["bot_token", "app_token", "allow_from"],
-        "required": ["bot_token"],
-    },
-    "qq": {
-        "name": "QQ",
-        "fields": ["app_id", "secret", "allow_from"],
-        "required": ["app_id", "secret"],
-    },
-    "email": {
-        "name": "Email",
-        "fields": ["imap_host", "imap_port", "imap_username", "imap_password", "smtp_host", "smtp_port", "smtp_username", "smtp_password"],
-        "required": ["imap_host", "smtp_host"],
-    },
-    "matrix": {
-        "name": "Matrix",
-        "fields": ["homeserver", "access_token", "user_id", "device_id"],
-        "required": ["homeserver"],
-    },
-}
-
-# 可用的 Provider 类型
-PROVIDERS = {
-    "openai": {
-        "name": "OpenAI",
-        "fields": ["api_key"],
-        "required": ["api_key"],
-    },
-    "anthropic": {
-        "name": "Anthropic (Claude)",
-        "fields": ["api_key"],
-        "required": ["api_key"],
-    },
-    "deepseek": {
-        "name": "DeepSeek",
-        "fields": ["api_key"],
-        "required": ["api_key"],
-    },
-    "openrouter": {
-        "name": "OpenRouter",
-        "fields": ["api_key"],
-        "required": ["api_key"],
-    },
-    "azure_openai": {
-        "name": "Azure OpenAI",
-        "fields": ["api_key", "endpoint", "api_version"],
-        "required": ["api_key", "endpoint"],
-    },
-    "gemini": {
-        "name": "Google Gemini",
-        "fields": ["api_key"],
-        "required": ["api_key"],
-    },
-    "moonshot": {
-        "name": "Moonshot (月之暗面)",
-        "fields": ["api_key"],
-        "required": ["api_key"],
-    },
-    "zhipu": {
-        "name": "Zhipu (智谱)",
-        "fields": ["api_key"],
-        "required": ["api_key"],
-    },
-    "minimax": {
-        "name": "MiniMax",
-        "fields": ["api_key"],
-        "required": ["api_key"],
-    },
-}
-
-# 部署方式
-DEPLOY_METHODS = {
-    "direct": {
-        "name": "直接运行",
-        "description": "直接在终端运行 nanobot gateway 命令",
-    },
-    "docker": {
-        "name": "Docker 容器",
-        "description": "创建 Docker 容器运行",
-    },
-    "systemd": {
-        "name": "systemd 服务",
-        "description": "注册为 Linux 系统服务",
-    },
-}
-
 # 默认基础目录
 DEFAULT_BASE_DIR = Path.home() / ".nanobot"
 
@@ -245,15 +131,17 @@ def find_all_available_instances() -> list[dict[str, Any]]:
         
         config = read_existing_config(Path(r["instance_dir"]))
         if config:
-            channels = []
-            for ch_id, ch in config.get("channels", {}).items():
-                if isinstance(ch, dict) and ch.get("enabled"):
-                    channels.append(CHANNELS.get(ch_id, {}).get("name", ch_id))
+            # 获取启用的 channel ID 列表
+            channels = [
+                ch_id for ch_id, ch in config.get("channels", {}).items()
+                if isinstance(ch, dict) and ch.get("enabled")
+            ]
             
-            providers = []
-            for p_id, p in config.get("providers", {}).items():
-                if isinstance(p, dict) and p.get("apiKey"):
-                    providers.append(PROVIDERS.get(p_id, {}).get("name", p_id))
+            # 获取有 apiKey 的 provider ID 列表
+            providers = [
+                p_id for p_id, p in config.get("providers", {}).items()
+                if isinstance(p, dict) and p.get("apiKey")
+            ]
             
             all_instances.append({
                 "path": r["instance_dir"],
@@ -275,15 +163,17 @@ def find_all_available_instances() -> list[dict[str, Any]]:
         
         config = read_existing_config(e)
         if config:
-            channels = []
-            for ch_id, ch in config.get("channels", {}).items():
-                if isinstance(ch, dict) and ch.get("enabled"):
-                    channels.append(CHANNELS.get(ch_id, {}).get("name", ch_id))
+            # 获取启用的 channel ID 列表
+            channels = [
+                ch_id for ch_id, ch in config.get("channels", {}).items()
+                if isinstance(ch, dict) and ch.get("enabled")
+            ]
             
-            providers = []
-            for p_id, p in config.get("providers", {}).items():
-                if isinstance(p, dict) and p.get("apiKey"):
-                    providers.append(PROVIDERS.get(p_id, {}).get("name", p_id))
+            # 获取有 apiKey 的 provider ID 列表
+            providers = [
+                p_id for p_id, p in config.get("providers", {}).items()
+                if isinstance(p, dict) and p.get("apiKey")
+            ]
             
             port = config.get("gateway", {}).get("port", 18790)
             
@@ -389,25 +279,22 @@ def suggest_new_instance_config(existing_instance_path: Path) -> dict[str, Any]:
 
 
 def get_instance_summary(existing_instances: list[Path]) -> list[dict[str, Any]]:
-    """获取现有实例的摘要信息"""
+    """获取现有实例的摘要信息（从配置动态读取）"""
     summary = []
     for inst in existing_instances:
         config = read_existing_config(inst)
         if config:
-            # 找出启用的 channel（跳过全局设置如 sendProgress）
-            enabled_channels = []
-            for ch_id, ch_config in config.get("channels", {}).items():
-                if isinstance(ch_config, dict) and ch_config.get("enabled"):
-                    ch_name = CHANNELS.get(ch_id, {}).get("name", ch_id)
-                    # 包含通道类型 ID，方便复制
-                    enabled_channels.append({"id": ch_id, "name": ch_name})
+            # 找出启用的 channel（跳过全局设置）
+            enabled_channels = [
+                ch_id for ch_id, ch_config in config.get("channels", {}).items()
+                if isinstance(ch_config, dict) and ch_config.get("enabled")
+            ]
             
             # 找出有 apiKey 的 provider
-            enabled_providers = []
-            for p_id, p_config in config.get("providers", {}).items():
-                if isinstance(p_config, dict) and p_config.get("apiKey"):
-                    p_name = PROVIDERS.get(p_id, {}).get("name", p_id)
-                    enabled_providers.append({"id": p_id, "name": p_name})
+            enabled_providers = [
+                p_id for p_id, p_config in config.get("providers", {}).items()
+                if isinstance(p_config, dict) and p_config.get("apiKey")
+            ]
             
             port = config.get("gateway", {}).get("port", 18790)
             
@@ -422,29 +309,38 @@ def get_instance_summary(existing_instances: list[Path]) -> list[dict[str, Any]]
     return summary
 
 
-def get_available_channels() -> list[dict[str, str]]:
-    """获取可用的 Channel 列表"""
-    return [{"id": k, "name": v["name"]} for k, v in CHANNELS.items()]
+def get_enabled_channels(config: dict[str, Any]) -> list[str]:
+    """从配置中获取启用的 channel ID 列表"""
+    return [
+        ch_id for ch_id, ch in config.get("channels", {}).items()
+        if isinstance(ch, dict) and ch.get("enabled")
+    ]
 
 
-def get_available_providers() -> list[dict[str, str]]:
-    """获取可用的 Provider 列表"""
-    return [{"id": k, "name": v["name"]} for k, v in PROVIDERS.items()]
+def get_enabled_providers(config: dict[str, Any]) -> list[str]:
+    """从配置中获取有 apiKey 的 provider ID 列表"""
+    return [
+        p_id for p_id, p in config.get("providers", {}).items()
+        if isinstance(p, dict) and p.get("apiKey")
+    ]
 
 
-def get_deploy_methods() -> list[dict[str, str]]:
-    """获取可用的部署方式列表"""
-    return [{"id": k, "name": v["name"], "description": v["description"]} for k, v in DEPLOY_METHODS.items()]
+def get_channel_fields_from_config(config: dict[str, Any], channel_id: str) -> list[str]:
+    """从配置中获取指定 Channel 的字段列表"""
+    channel_config = config.get("channels", {}).get(channel_id, {})
+    if isinstance(channel_config, dict):
+        # 返回所有非全局设置的键
+        return [k for k in channel_config.keys() if k not in ("enabled",)]
+    return []
 
 
-def get_channel_fields(channel_id: str) -> list[str]:
-    """获取指定 Channel 需要填写的字段"""
-    return CHANNELS.get(channel_id, {}).get("fields", [])
-
-
-def get_provider_fields(provider_id: str) -> list[str]:
-    """获取指定 Provider 需要填写的字段"""
-    return PROVIDERS.get(provider_id, {}).get("fields", [])
+def get_provider_fields_from_config(config: dict[str, Any], provider_id: str) -> list[str]:
+    """从配置中获取指定 Provider 的字段列表"""
+    provider_config = config.get("providers", {}).get(provider_id, {})
+    if isinstance(provider_config, dict):
+        # 返回所有非敏感键
+        return [k for k in provider_config.keys() if k not in ("apiKey",)]
+    return []
 
 
 def copy_channel_config(source_instance_path: Path, channel_id: str) -> dict[str, Any] | None:

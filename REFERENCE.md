@@ -126,30 +126,23 @@ await message.reply("✅ 配置已生成：~/.nanobot_001/config.json")
 
 ### 辅助函数
 
-| 函数 |说明 |
+| 函数 | 说明 |
 |------|------|
-| `get_available_channels()` | 获取可用 Channel 列表 |
-| `get_available_providers()` | 获取可用 Provider 列表 |
-| `get_deploy_methods()` | 获取部署方式列表 |
+| `get_enabled_channels(config)` | 从配置获取启用的 channel 列表 |
+| `get_enabled_providers(config)` | 从配置获取有 apiKey 的 provider 列表 |
+| `get_channel_fields_from_config(config, ch_id)` | 从配置获取 channel 字段 |
+| `get_provider_fields_from_config(config, p_id)` | 从配置获取 provider 字段 |
 | `check_port_available(port)` | 检查端口是否可用 |
 | `check_port_conflict(port, exclude)` | 检查端口是否与现有实例冲突 |
 
 ---
 
-## 可用 Channel 类型
+## 策略说明
 
-- telegram, discord, whatsapp, feishu, dingtalk, slack, qq, email, matrix
+本 skill 采用**拷贝后修改**的策略：
 
-## 可用 Provider 类型
+1. 从现有实例拷贝完整配置
+2. 自动修改 port 和 workspace
+3. 返回配置后由用户自行修改 channel/provider 等敏感信息
 
-- openai, anthropic, deepseek, openrouter, azure_openai, gemini, moonshot, zhipu, minimax
-
-## 部署方式
-
-- direct, docker, systemd
-
-## 错误处理
-
-- `copy_and_modify_config()`: 源文件不存在时抛出 `FileNotFoundError`
-- `save_config()`: 支持 `overwrite` 参数覆盖已存在的配置文件
-- `generate_docker_compose()` / `generate_systemd_service()`: 支持 `save` 参数自动保存到文件
+不再维护固定的 channel/provider 枚举列表，而是从源配置中动态读取当前启用的项。
