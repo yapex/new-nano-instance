@@ -1,4 +1,4 @@
-"""Nanobot 多实例自动部署 Skill 实现"""
+"""Nanobot New Instance Skill Implementation"""
 
 import json
 import os

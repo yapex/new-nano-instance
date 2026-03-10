@@ -1,4 +1,4 @@
-# Deploy Nanobot Instance Skill
+# New Nano Instance Skill
 
 Automatically deploy new nanobot instances via interactive Q&A.
 
@@ -17,7 +17,7 @@ Or use the skill manager to add: `https://github.com/yapex/new-nano-instance`
 Trigger with:
 - "部署新实例"
 - "创建新 nanobot"
-- "deploy nanobot instance"
+- "deploy new instance"
 
 See [SKILL.md](SKILL.md) and [REFERENCE.md](REFERENCE.md) for details.
 

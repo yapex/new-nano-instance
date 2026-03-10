@@ -1,148 +1,148 @@
-# Nanobot 多实例自动部署 - 参考文档
+# New Nano Instance - Reference
 
-## 交互流程
+## Interaction Flow
 
-### 步骤 1: 选择源实例
+### Step 1: Select Source Instance
 
-调用 `find_all_available_instances()` 获取实例列表，通过对话展示供用户选择。
+Call `find_all_available_instances()` to get instance list, display via conversation for user selection.
 
-### 步骤 2: 询问是否继承配置
+### Step 2: Ask About Config Inheritance
 
 ```
-🤔 是否继承源实例的完整配置？
+🤔 Do you want to inherit the source instance's full config?
 
-   Y) 是 - 继承所有配置，自动修改 port 和 workspace
-   N) 否 - 自定义配置
+   Y) Yes - Inherit all config, auto-modify port and workspace
+   N) No - Custom config
 
-请选择 (Y/N):
+Please choose (Y/N):
 ```
 
-### 步骤 3A: 继承配置（选择 Y）
+### Step 3A: Inherit Config (Choose Y)
 
 ```python
 config = copy_and_modify_config(
-    source_config_path=Path(用户选择的实例路径),
-    target_base_dir=用户输入的目录,
+    source_config_path=Path(user_selected_instance_path),
+    target_base_dir=user_input_directory,
 )
 save_config(config, Path(target_base_dir) / "config.json")
 ```
 
-### 步骤 3B: 自定义配置（选择 N）
+### Step 3B: Custom Config (Choose N)
 
-依次询问：
-1. 新实例目录
-2. 端口
-3. 工作区
+Ask sequentially:
+1. New instance directory
+2. Port
+3. Workspace
 4. Channel
 5. Provider
-6. 部署方式
+6. Deploy method
 
-每一步都要等待用户回答后才能继续。
+Wait for user answer before continuing each step.
 
 ---
 
-## 输出模板
+## Output Templates
 
-### 实例列表
+### Instance List
 
 ```
-📊 可用实例:
+📊 Available Instances:
    A) 🔴 yapex-bot (Port: 18790) - Telegram, Feishu
    B) ⚪ ~/.nanobot_001 (Port: 18791) - Telegram
 
-请选择配置源 (A/B):
+Please choose config source (A/B):
 ```
 
-### 继承确认
+### Inheritance Confirmation
 
 ```
-🤔 是否继承源实例的完整配置？
+🤔 Do you want to inherit the source instance's full config?
 
-   Y) 是 - 继承所有配置，自动修改 port 和 workspace
-   N) 否 - 自定义配置
+   Y) Yes - Inherit all config, auto-modify port and workspace
+   N) No - Custom config
 
-请选择 (Y/N):
+Please choose (Y/N):
 ```
 
-### 完成结果
+### Completion Result
 
 ```
-✅ 配置文件已生成: ~/.nanobot_001/config.json
+✅ Config generated: ~/.nanobot_001/config.json
 
-📋 配置摘要:
-   • Port: 18791 (原 18790 + 1)
-   • Workspace: workspace (相对路径)
+📋 Config Summary:
+   • Port: 18791 (original 18790 + 1)
+   • Workspace: workspace (relative path)
    • Channels: telegram, feishu
    • Providers: custom, zhipu, minimax
 
-📝 启动命令:
+📝 Start Command:
 nanobot gateway --config ~/.nanobot_001/config.json
 ```
 
 ---
 
-## Agent 输出规范
+## Agent Output Standards
 
-所有函数调用结果必须通过对话返回，例如：
+All function call results must return via conversation, e.g.:
 
 ```python
-# ❌ 错误示例 - 使用 print
-print("配置已生成")
+# ❌ Wrong - using print
+print("Config generated")
 
-# ✅ 正确示例 - 通过对话返回
-await message.reply("✅ 配置已生成：~/.nanobot_001/config.json")
+# ✅ Correct - return via conversation
+await message.reply("✅ Config generated: ~/.nanobot_001/config.json")
 ```
 
 ---
 
-## 函数列表
+## Function List
 
-### 查找实例
+### Find Instances
 
-| 函数 | 说明 |
-|------|------|
-| `find_all_available_instances()` | 获取所有可用实例 |
-| `find_running_instances()` | 查找运行中的实例 |
-| `find_existing_instances(base_dir)` | 查找已存在的实例 |
-| `get_next_instance_name(base_dir)` | 获取下一个实例名称 |
+| Function | Description |
+|----------|-------------|
+| `find_all_available_instances()` | Get all available instances |
+| `find_running_instances()` | Find running instances |
+| `find_existing_instances(base_dir)` | Find existing instances |
+| `get_next_instance_name(base_dir)` | Get next instance name |
 
-### 配置操作
+### Config Operations
 
-| 函数 | 说明 |
-|------|------|
-| `copy_and_modify_config(source, target)` | 复制并修改配置 |
-| `read_existing_config(path)` | 读取现有配置 |
-| `save_config(config, path)` | 保存配置文件 |
-| `suggest_new_instance_config(path)` | 建议新实例配置 |
+| Function | Description |
+|----------|-------------|
+| `copy_and_modify_config(source, target)` | Copy and modify config |
+| `read_existing_config(path)` | Read existing config |
+| `save_config(config, path)` | Save config file |
+| `suggest_new_instance_config(path)` | Suggest new instance config |
 
-### 启动相关
+### Startup Related
 
-| 函数 | 说明 |
-|------|------|
-| `get_start_command(config_path, method)` | 获取启动命令 |
-| `generate_docker_compose(path, name, port)` | 生成 Docker Compose |
-| `generate_systemd_service(path, name)` | 生成 Systemd 配置 |
-| `validate_deployment(path, port)` | 验证部署 |
+| Function | Description |
+|----------|-------------|
+| `get_start_command(config_path, method)` | Get start command |
+| `generate_docker_compose(path, name, port)` | Generate Docker Compose |
+| `generate_systemd_service(path, name)` | Generate Systemd config |
+| `validate_deployment(path, port)` | Validate deployment |
 
-### 辅助函数
+### Helper Functions
 
-| 函数 | 说明 |
-|------|------|
-| `get_enabled_channels(config)` | 从配置获取启用的 channel 列表 |
-| `get_enabled_providers(config)` | 从配置获取有 apiKey 的 provider 列表 |
-| `get_channel_fields_from_config(config, ch_id)` | 从配置获取 channel 字段 |
-| `get_provider_fields_from_config(config, p_id)` | 从配置获取 provider 字段 |
-| `check_port_available(port)` | 检查端口是否可用 |
-| `check_port_conflict(port, exclude)` | 检查端口是否与现有实例冲突 |
+| Function | Description |
+|----------|-------------|
+| `get_enabled_channels(config)` | Get enabled channels from config |
+| `get_enabled_providers(config)` | Get enabled providers from config |
+| `get_channel_fields_from_config(config, ch_id)` | Get channel fields from config |
+| `get_provider_fields_from_config(config, p_id)` | Get provider fields from config |
+| `check_port_available(port)` | Check if port is available |
+| `check_port_conflict(port, exclude)` | Check port conflict with existing instances |
 
 ---
 
-## 策略说明
+## Strategy
 
-本 skill 采用**拷贝后修改**的策略：
+This skill uses a **copy-and-modify** strategy:
 
-1. 从现有实例拷贝完整配置
-2. 自动修改 port 和 workspace
-3. 返回配置后由用户自行修改 channel/provider 等敏感信息
+1. Copy full config from existing instance
+2. Auto-modify port and workspace
+3. Return config for user to modify channel/provider sensitive info
 
-不再维护固定的 channel/provider 枚举列表，而是从源配置中动态读取当前启用的项。
+No hardcoded channel/provider enum - read dynamically from source config.
