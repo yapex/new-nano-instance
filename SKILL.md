@@ -80,7 +80,7 @@ nanobot gateway --config ~/.nanobot_001/config.json
 ## 实现函数
 
 ```python
-from skill import (
+from scripts.skill import (
     find_all_available_instances,   # 获取可用实例列表
     find_running_instances,          # 查找运行中的实例
     copy_and_modify_config,         # 复制并修改配置（继承模式）
