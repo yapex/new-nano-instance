@@ -132,6 +132,7 @@ await message.reply("✅ 配置已生成：~/.nanobot_001/config.json")
 | `get_available_providers()` | 获取可用 Provider 列表 |
 | `get_deploy_methods()` | 获取部署方式列表 |
 | `check_port_available(port)` | 检查端口是否可用 |
+| `check_port_conflict(port, exclude)` | 检查端口是否与现有实例冲突 |
 
 ---
 
@@ -141,8 +142,14 @@ await message.reply("✅ 配置已生成：~/.nanobot_001/config.json")
 
 ## 可用 Provider 类型
 
-- openai, anthropic, deepseek, openrouter, azure_openai, gemini, moonshot
+- openai, anthropic, deepseek, openrouter, azure_openai, gemini, moonshot, zhipu, minimax
 
 ## 部署方式
 
 - direct, docker, systemd
+
+## 错误处理
+
+- `copy_and_modify_config()`: 源文件不存在时抛出 `FileNotFoundError`
+- `save_config()`: 支持 `overwrite` 参数覆盖已存在的配置文件
+- `generate_docker_compose()` / `generate_systemd_service()`: 支持 `save` 参数自动保存到文件

@@ -92,6 +92,16 @@ PROVIDERS = {
         "fields": ["api_key"],
         "required": ["api_key"],
     },
+    "zhipu": {
+        "name": "Zhipu (智谱)",
+        "fields": ["api_key"],
+        "required": ["api_key"],
+    },
+    "minimax": {
+        "name": "MiniMax",
+        "fields": ["api_key"],
+        "required": ["api_key"],
+    },
 }
 
 # 部署方式
@@ -153,23 +163,19 @@ def find_running_instances() -> list[dict[str, Any]]:
             if "nanobot" not in line.lower() or "gateway" not in line.lower():
                 continue
             
-            # 解析进程信息
-            parts = line.split()
-            if len(parts) < 2:
-                continue
-            
-            try:
-                pid = int(parts[1])
-            except ValueError:
-                continue
-            
-            # 解析命令行参数
-            cmd_start = line.find(parts[10])
-            command = line[cmd_start:]
-            
-            # 解析 --config 参数
+            # 解析命令行参数 - 查找 --config 或 -c 后的路径
             config_path = None
             port = None
+            
+            # 提取命令行部分（跳过用户、CPU等字段）
+            # ps aux 格式: USER PID %CPU %MEM VSZ RSS TTY STAT START TIME COMMAND
+            parts = line.split()
+            if len(parts) < 11:
+                continue
+            
+            # 从第11个字段开始是命令
+            command_parts = parts[10:]
+            command = " ".join(command_parts)
             
             args = command.split()
             for i, arg in enumerate(args):
@@ -195,10 +201,15 @@ def find_running_instances() -> list[dict[str, Any]]:
                 try:
                     config_data = json.loads(config_path.read_text())
                     port = config_data.get("gateway", {}).get("port", 18790)
-                except:
+                except Exception:
                     pass
             
             if config_path and config_path.exists():
+                try:
+                    pid = int(parts[1])
+                except ValueError:
+                    continue
+                    
                 instance_dir = config_path.parent
                 running_instances.append({
                     "pid": pid,
@@ -353,7 +364,7 @@ def suggest_new_instance_config(existing_instance_path: Path) -> dict[str, Any]:
 
     # 获取现有的 workspace
     old_workspace = existing_config.get("agents", {}).get("defaults", {}).get("workspace", "~/.nanobot_001/workspace")
-    old_workspace_path = Path(old_workspace.replace("~", str(Path.home())))
+    old_workspace_path = Path(old_workspace).expanduser()
 
     # 计算新实例编号
     old_name = existing_instance_path.name
@@ -490,9 +501,17 @@ def copy_and_modify_config(
     
     Returns:
         修改后的配置字典
+    
+    Raises:
+        FileNotFoundError: 源配置文件不存在
+        json.JSONDecodeError: 源配置文件格式错误
     """
+    source_path = Path(source_config_path)
+    if not source_path.exists():
+        raise FileNotFoundError(f"Source config not found: {source_config_path}")
+    
     # 读取源配置（完整复制）
-    with open(source_config_path, "r", encoding="utf-8") as f:
+    with open(source_path, "r", encoding="utf-8") as f:
         config = json.load(f)
     
     # 修改 port
@@ -517,8 +536,13 @@ def copy_and_modify_config(
     return config
 
 
-def save_config(config: dict[str, Any], config_path: Path) -> tuple[bool, str]:
+def save_config(config: dict[str, Any], config_path: Path, overwrite: bool = False) -> tuple[bool, str]:
     """保存配置文件
+    
+    Args:
+        config: 配置字典
+        config_path: 配置文件路径
+        overwrite: 是否覆盖已存在的文件
     
     Returns:
         (success, message)
@@ -528,8 +552,8 @@ def save_config(config: dict[str, Any], config_path: Path) -> tuple[bool, str]:
     # 检查目录是否已存在且有配置文件
     if config_path.parent.exists():
         existing_config = config_path.parent / "config.json"
-        if existing_config.exists():
-            return False, f"目录 {config_path.parent} 已存在配置文件，是否覆盖？"
+        if existing_config.exists() and not overwrite:
+            return False, f"目录 {config_path.parent} 已存在配置文件，请确认是否覆盖"
     
     config_path.parent.mkdir(parents=True, exist_ok=True)
     with open(config_path, "w", encoding="utf-8") as f:
@@ -538,8 +562,18 @@ def save_config(config: dict[str, Any], config_path: Path) -> tuple[bool, str]:
     return True, f"配置文件已保存到 {config_path}"
 
 
-def generate_docker_compose(config_path: Path, instance_name: str, port: int) -> str:
-    """生成 docker-compose 配置"""
+def generate_docker_compose(config_path: Path, instance_name: str, port: int, save: bool = True) -> str:
+    """生成 docker-compose 配置
+    
+    Args:
+        config_path: 配置文件路径
+        instance_name: 实例名称
+        port: 端口
+        save: 是否保存到文件
+    
+    Returns:
+        docker-compose 配置字符串
+    """
     compose = f"""version: '3.8'
 
 services:
@@ -558,11 +592,24 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
 """
+    if save:
+        compose_path = config_path.parent / f"docker-compose-{instance_name}.yml"
+        compose_path.write_text(compose, encoding="utf-8")
+    
     return compose
 
 
-def generate_systemd_service(config_path: Path, instance_name: str) -> str:
-    """生成 systemd 服务配置"""
+def generate_systemd_service(config_path: Path, instance_name: str, save: bool = True) -> str:
+    """生成 systemd 服务配置
+    
+    Args:
+        config_path: 配置文件路径
+        instance_name: 实例名称
+        save: 是否保存到文件
+    
+    Returns:
+        systemd 服务配置字符串
+    """
     service = f"""[Unit]
 Description=Nanobot {instance_name} Instance
 After=network.target
@@ -579,28 +626,68 @@ ReadWritePaths={config_path.parent}
 [Install]
 WantedBy=default.target
 """
+    if save:
+        service_path = Path.home() / f".config/systemd/user/nanobot-{instance_name}.service"
+        service_path.parent.mkdir(parents=True, exist_ok=True)
+        service_path.write_text(service, encoding="utf-8")
+    
     return service
 
 
 def get_start_command(config_path: Path, deploy_method: str) -> str:
-    """获取启动命令"""
+    """获取启动命令
+    
+    Args:
+        config_path: 配置文件路径
+        deploy_method: 部署方式 (direct/docker/systemd)
+    
+    Returns:
+        启动命令字符串
+    """
     if deploy_method == "direct":
         return f"nanobot gateway --config {config_path}"
     elif deploy_method == "docker":
-        return f"docker-compose -f docker-compose-{config_path.stem}.yml up -d"
+        instance_name = config_path.stem
+        return f"docker-compose -f {config_path.parent}/docker-compose-{instance_name}.yml up -d"
     elif deploy_method == "systemd":
-        return f"systemctl --user start nanobot-{config_path.stem}"
+        instance_name = config_path.stem
+        return f"systemctl --user start nanobot-{instance_name}"
     return ""
 
 
 def check_port_available(port: int) -> bool:
-    """检查端口是否可用"""
+    """检查端口是否可用（未被占用）"""
     import socket
     try:
         with socket.create_connection(("localhost", port), timeout=1):
             return False
     except (socket.timeout, ConnectionRefusedError, OSError):
         return True
+
+
+def check_port_conflict(port: int, exclude_instance_path: Path | None = None) -> tuple[bool, str]:
+    """检查端口是否与现有实例冲突
+    
+    Args:
+        port: 要检查的端口
+        exclude_instance_path: 排除的实例路径（用于更新场景）
+    
+    Returns:
+        (is_available, message)
+    """
+    # 检查端口是否被占用
+    if not check_port_available(port):
+        return False, f"端口 {port} 已被其他进程占用"
+    
+    # 检查是否与现有实例端口冲突
+    all_instances = find_all_available_instances()
+    for inst in all_instances:
+        if exclude_instance_path and Path(inst["path"]) == exclude_instance_path:
+            continue
+        if inst.get("port") == port:
+            return False, f"端口 {port} 已由实例 {inst['name']} 使用"
+    
+    return True, f"端口 {port} 可用"
 
 
 def validate_deployment(config_path: Path, port: int, timeout: int = 10) -> bool:
